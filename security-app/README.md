@@ -24,3 +24,7 @@ Test autentikacije (bez GUI-ja)
 >>> login_user("test", "test123")
 
 Program vraća True 
+
+app.py - Implementira grafički korisnički interfejs pomoću Tkinter biblioteke i povezuje GUI sa autentikacionom logikom aplikacije.
+
+(venv)> python app.py - Pokrećemo GUI
