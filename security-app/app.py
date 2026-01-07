@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import re
 import auth
+from download_utils import download_db
 
 THEME = {
     "bg": "#070b1e",
@@ -347,6 +348,11 @@ class LoginScreen(ScreenBase):
             self.app.status.set(f"Login success. Mode: {mode.upper()}.")
             self.password.delete(0, tk.END)
             set_focus(self.username)
+            # Ponudi korisniku da preuzme bazu
+            if download_db():
+                Toast(self.app, "Database downloaded!", kind="success")
+            else:
+                Toast(self.app, "Database download canceled.", kind="warn")
         elif status == "locked":
             Toast(self.app, "Account locked.", kind="danger")
             self.app.status.set("Login failed: account locked.")
