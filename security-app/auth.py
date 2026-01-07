@@ -2,6 +2,7 @@ import bcrypt
 import sqlite3
 
 DB_NAME = "users.db"
+MAX_FAILED_ATTEMPTS = 3
 
 
 def get_connection():
@@ -19,12 +20,11 @@ def check_password(password: str, hashed: bytes) -> bool:
 def register_user(username: str, password: str) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-
     try:
         password_hash = hash_password(password)
         cursor.execute(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            (username, password_hash)
+            "INSERT INTO users (username, password_hash, failed_attempts, locked) VALUES (?, ?, 0, 0)",
+            (username, password_hash),
         )
         conn.commit()
         return True
@@ -34,18 +34,55 @@ def register_user(username: str, password: str) -> bool:
         conn.close()
 
 
-def login_user(username: str, password: str) -> bool:
+def _get_user(username: str):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute(
-        "SELECT password_hash FROM users WHERE username = ?",
-        (username,)
+        "SELECT password_hash, failed_attempts, locked FROM users WHERE username = ?",
+        (username,),
     )
     row = cursor.fetchone()
     conn.close()
+    return row
 
+
+def _update_attempts(username: str, failed: int, locked: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET failed_attempts = ?, locked = ? WHERE username = ?",
+        (failed, locked, username),
+    )
+    conn.commit()
+    conn.close()
+
+
+def login_user(username: str, password: str):
+    """
+    Returns:
+      ("ok", None)
+      ("not_found", None)
+      ("locked", None)
+      ("invalid", remaining_attempts)
+    """
+    row = _get_user(username)
     if row is None:
-        return False
+        return ("not_found", None)
 
-    return check_password(password, row[0])
+    password_hash, failed_attempts, locked = row
+
+    if locked:
+        return ("locked", None)
+
+    if check_password(password, password_hash):
+        _update_attempts(username, 0, 0)
+        return ("ok", None)
+
+    failed_attempts += 1
+    locked = 1 if failed_attempts >= MAX_FAILED_ATTEMPTS else 0
+    _update_attempts(username, failed_attempts, locked)
+
+    if locked:
+        return ("locked", None)
+
+    return ("invalid", MAX_FAILED_ATTEMPTS - failed_attempts)

@@ -3,7 +3,7 @@ Settings -> Virus & Threat protection -> Ransomware protection -> Controlled fol
 
 > python -m venv venv - kreirali smo virtual environment (izolovano Python okruženje u kojem projekat koristi sopstvene biblioteke i verzije, nezavisno od ostatka sistema)
 
-> venv\Scripts\Activate.ps1 - aktiviramo virtual environment
+> venv\Scripts\Activate.ps1 - aktiviramo virtual environment!!!
 
 (venv)> pip install bcrypt - instaliramo biblioteku za hešovanje lozinki
 
