@@ -28,3 +28,29 @@ Program vraća True
 app.py - Implementira grafički korisnički interfejs pomoću Tkinter biblioteke i povezuje GUI sa autentikacionom logikom aplikacije.
 
 (venv)> python app.py - Pokrećemo GUI
+
+==============================================================================================
+#                                            TEST                                            #
+==============================================================================================
+
+Pokrenuti aplikaciju tako što ćete uneti sledeće komande u terminal: 
+
+> venv\Scripts\Activate.ps1
+(venv)> python app.py
+
+Nakon što se prikazalo grafičko okruženje izaberite opciju da se ulogujete ili registrujete.
+Registracija prikazuje jačinu lozinke i proverava da li su unete lozinke međusobno podudarne.
+
+Nakon što napravite nalog možete se ulogovati tako što ćete uneti korisničko ime i lozinku.
+Ukoliko odaberete dugme "DEMO" osposobićete poseban DEMO režim koji služi isključivo za edukativnu demonstraciju SQL Injection napada.
+
+Secure mode – koristi parametrizovane SQL upite (bezbedno).
+Demo mode – koristi nebezbedno konkateniranje SQL upita (ranjivo).
+
+U polje Username uneti jedan od sledećih SQL injection payload-a:
+
+' OR '1'='1
+' OR 1=1 --
+
+Polje Password može sadržati bilo koju vrednost.
+Kliknuti LOGIN i prijava će uspeti bez validnih kredencijala.

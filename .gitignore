@@ -6,3 +6,9 @@ __pycache__/
 
 # Virtual environment
 venv/
+
+# Database files
+users.db
+
+# Log files
+auth_audit.log
