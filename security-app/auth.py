@@ -28,6 +28,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
+    # USERS TABLE
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,12 +40,24 @@ def init_db():
         )
     """)
 
+    # LOGIN EVENTS TABLE
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS login_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            success INTEGER NOT NULL,      -- 1 = success, 0 = failure
+            mode TEXT NOT NULL,            -- secure | demo
+            reason TEXT,
+            occurred_at TEXT NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
 
 # ======================================================
-# AUDIT LOGGING
+# AUDIT LOGGING (FILE)
 # ======================================================
 
 def audit_log(event: str, username: str, success: bool, details: str = ""):
@@ -52,6 +65,32 @@ def audit_log(event: str, username: str, success: bool, details: str = ""):
     line = f"{ts} | {event.upper()} | user={username} | success={success} | {details}\n"
     with open(AUDIT_LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line)
+
+
+# ======================================================
+# LOGIN EVENTS (DATABASE)
+# ======================================================
+
+def log_login_event(username: str, success: bool, mode: str, reason: str = ""):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        INSERT INTO login_events (username, success, mode, reason, occurred_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            username,
+            1 if success else 0,
+            "demo" if mode == "demo" else "secure",
+            reason,
+            datetime.datetime.utcnow().isoformat(),
+        ),
+    )
+
+    conn.commit()
+    conn.close()
 
 
 # ======================================================
@@ -110,7 +149,7 @@ def _get_user_safe(username: str):
 
 
 def _get_user_vulnerable(username: str):
-    # INTENTIONALLY VULNERABLE (for demo purposes only)
+    # INTENTIONALLY VULNERABLE (demo only)
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -144,7 +183,7 @@ def _update_attempts(username: str, failed: int, locked: int):
 
 
 # ======================================================
-# AUTHENTICATION
+# AUTHENTICATION (SECURE)
 # ======================================================
 
 def login_user(username: str, password: str):
@@ -165,17 +204,20 @@ def login_user(username: str, password: str):
 
     if row is None:
         audit_log("login", username, False, "user_not_found")
+        log_login_event(username, False, "secure", "user_not_found")
         return ("not_found", None)
 
     password_hash, failed_attempts, locked = row
 
     if locked:
         audit_log("login", username, False, "account_locked")
+        log_login_event(username, False, "secure", "account_locked")
         return ("locked", None)
 
     if check_password(password, password_hash):
         _update_attempts(username, 0, 0)
         audit_log("login", username, True)
+        log_login_event(username, True, "secure", "ok")
         return ("ok", None)
 
     failed_attempts += 1
@@ -184,14 +226,17 @@ def login_user(username: str, password: str):
 
     if locked:
         audit_log("login", username, False, "locked_after_failures")
+        log_login_event(username, False, "secure", "locked_after_failures")
         return ("locked", None)
 
-    audit_log("login", username, False, f"invalid_password remaining={MAX_FAILED_ATTEMPTS - failed_attempts}")
-    return ("invalid", MAX_FAILED_ATTEMPTS - failed_attempts)
+    remaining = MAX_FAILED_ATTEMPTS - failed_attempts
+    audit_log("login", username, False, f"invalid_password remaining={remaining}")
+    log_login_event(username, False, "secure", f"invalid_password remaining={remaining}")
+    return ("invalid", remaining)
 
 
 # ======================================================
-# VULNERABLE AUTH (SQL INJECTION DEMO)
+# AUTHENTICATION (VULNERABLE DEMO)
 # ======================================================
 
 def login_user_vulnerable(username: str, password: str):
@@ -205,12 +250,12 @@ def login_user_vulnerable(username: str, password: str):
 
     if row is None:
         audit_log("login_vulnerable", username, False, "user_not_found")
+        log_login_event(username, False, "demo", "user_not_found")
         return ("not_found", None)
 
-    password_hash, failed_attempts, locked = row
-
-    # In vulnerable mode we *pretend* password matches
+    # Demo: pretend password matches
     audit_log("login_vulnerable", username, True, "sql_injection_possible")
+    log_login_event(username, True, "demo", "sql_injection_possible")
     return ("ok", None)
 
 
@@ -220,4 +265,4 @@ def login_user_vulnerable(username: str, password: str):
 
 if __name__ == "__main__":
     init_db()
-    print("Auth database initialized.")
+    print("Auth database initialized (users + login_events).")

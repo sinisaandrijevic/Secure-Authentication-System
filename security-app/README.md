@@ -56,4 +56,4 @@ Polje Password može sadržati bilo koju vrednost.
 Kliknuti LOGIN i prijava će uspeti bez validnih kredencijala.
 
 !!! Ukoliko se korisnik uspešno ulogovao ima opciju da preuzme bazu podataka
-* Baza podataka ce se koristiti u sledećoj C# aplikaciji
+* Baza podataka će se koristiti u sledećoj C# aplikaciji
